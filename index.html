@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Web Application</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Algerian&display=swap');
+
+        body {
+            font-family: monospace;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: monospace;
+            color: #333;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+
+        th {
+            background-color: #00FFFF;
+            font-weight: bold;
+            text-align: left;
+        }
+
+        tr:nth-child(even) {
+            background-color: #EEE0E5;
+        }
+
+        tr:hover {
+            background-color: #E0FFFF;
+        }
+
+        .button {
+            padding: 8px 16px;
+            margin-right: 5px;
+            font-size: 14px;
+            border: none;
+            border-radius: 4px;
+            background-color: #00FFFF;
+            color: #000000;
+            cursor: pointer;
+            font-family: monospace;
+        }
+
+        .button:hover {
+            background-color: #EEE0E5;
+        }
+
+        .button.remove,
+        .button.edit {
+            font-family: monospace; /* Измененный шрифт для кнопок Remove и Edit */
+        }
+
+        #addUserForm input[type="text"] {
+            font-family: monospace; /* Измененный шрифт для текстовых полей формы */
+        }
+
+        #addUserForm button {
+            font-family: monospace; /* Измененный шрифт для кнопок формы */
+        }
+
+        .pagination {
+            margin-top: 20px;
+        }
+
+        .pagination button {
+            font-family: monospace; /* Измененный шрифт для кнопок пагинации */
+        }
+    </style>
+
+    <script>
+        var currentPage = 1;
+        var totalPages = 1;
+
+        function getUsers() {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "/users?page=" + currentPage, true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    var response = JSON.parse(xhr.responseText);
+                    displayUsers(response.users);
+                    updatePagination(response.totalPages);
+                }
+            };
+            xhr.send();
+        }
+
+        function addUser() {
+            var fullName = document.getElementById("fullName").value;
+            var dob = document.getElementById("dob").value;
+            var role = document.getElementById("role").value;
+
+            var user = {
+                fullName: fullName,
+                dob: dob,
+                role: role
+            };
+
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/users", true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 201) {
+                    getUsers();
+                    resetForm();
+                }
+            };
+            xhr.send(JSON.stringify(user));
+        }
+
+        function removeUser(userId) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("DELETE", "/users/" + userId, true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    getUsers();
+                }
+            };
+            xhr.send();
+        }
+
+        function editUser(userId) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "/users/" + userId, true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    var user = JSON.parse(xhr.responseText);
+                    populateEditForm(user);
+                }
+            };
+            xhr.send();
+        }
+
+        function populateEditForm(user) {
+            document.getElementById("fullName").value = user.fullName;
+            document.getElementById("dob").value = user.dob;
+            document.getElementById("role").value = user.role;
+            var saveButton = document.getElementById("saveButton");
+            saveButton.onclick = function() {
+                updateUser(user.id);
+            };
+            saveButton.innerText = "Save";
+        }
+
+        function updateUser(userId) {
+            var fullName = document.getElementById("fullName").value;
+            var dob = document.getElementById("dob").value;
+            var role = document.getElementById("role").value;
+
+            var user = {
+                fullName: fullName,
+                dob: dob,
+                role: role
+            };
+
+            var xhr = new XMLHttpRequest();
+            xhr.open("PUT", "/users/" + userId, true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    getUsers();
+                    resetForm();
+                }
+            };
+            xhr.send(JSON.stringify(user));
+            document.getElementById("saveButton").innerText = "Add User";
+        }
+
+        function displayUsers(users) {
+          var tableBody = document.getElementById("userTableBody");
+          tableBody.innerHTML = "";
+
+          for (var i = 0; i < users.length; i++) {
+            var user = users[i];
+
+            var row = document.createElement("tr");
+
+            var fullNameCell = document.createElement("td");
+            fullNameCell.innerText = user.fullName;
+            row.appendChild(fullNameCell);
+
+            var dobCell = document.createElement("td");
+            dobCell.innerText = user.dob;
+            row.appendChild(dobCell);
+
+            var roleCell = document.createElement("td");
+            roleCell.innerText = user.role;
+            row.appendChild(roleCell);
+
+            var entryTimesCell = document.createElement("td");
+            entryTimesCell.innerText = user.loginTime ? user.loginTime : "";
+            row.appendChild(entryTimesCell);
+
+            var actionCell = document.createElement("td");
+            var removeButton = document.createElement("button");
+            removeButton.innerText = "Remove";
+            removeButton.onclick = (function (id) {
+              return function () {
+                removeUser(id);
+              };
+            })(user.id);
+            removeButton.classList.add("button", "remove");
+            actionCell.appendChild(removeButton);
+
+            var editButton = document.createElement("button");
+            editButton.innerText = "Edit";
+            editButton.onclick = (function (id) {
+              return function () {
+                editUser(id);
+              };
+            })(user.id);
+            editButton.classList.add("button", "edit");
+            actionCell.appendChild(editButton);
+
+            row.appendChild(actionCell);
+
+            tableBody.appendChild(row);
+          }
+        }
+
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                getUsers();
+            }
+        }
+
+        function nextPage() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                getUsers();
+            }
+        }
+
+        function updatePagination(total) {
+            totalPages = total;
+            var paginationContainer = document.getElementById("paginationContainer");
+            paginationContainer.innerHTML = "";
+
+            var previousButton = document.createElement("button");
+            previousButton.innerText = "Previous Page";
+            previousButton.classList.add("button");
+            previousButton.disabled = currentPage === 1;
+            previousButton.onclick = previousPage;
+            paginationContainer.appendChild(previousButton);
+
+            var nextButton = document.createElement("button");
+            nextButton.innerText = "Next Page";
+            nextButton.classList.add("button");
+            nextButton.disabled = currentPage === totalPages;
+            nextButton.onclick = nextPage;
+            paginationContainer.appendChild(nextButton);
+        }
+
+        function resetForm() {
+            document.getElementById("fullName").value = "";
+            document.getElementById("dob").value = "";
+            document.getElementById("role").value = "";
+            document.getElementById("saveButton").innerText = "Add User";
+        }
+
+        getUsers();
+    </script>
+</head>
+<body>
+    <h1>Web Application</h1>
+
+    <h2>Users</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Full Name</th>
+                <th>Date of Birth</th>
+                <th>Role</th>
+                <th>Entry Time</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="userTableBody"></tbody>
+    </table>
+
+    <div id="addUserForm">
+        <h3>Add/Edit User</h3>
+        <label for="fullName">Full Name:</label>
+        <input type="text" id="fullName" required><br>
+        <label for="dob">Date of Birth:</label>
+        <input type="text" id="dob" required><br>
+        <label for="role">Role:</label>
+        <input type="text" id="role" required><br>
+        <button onclick="addUser()" id="saveButton">Add User</button>
+        <button onclick="resetForm()">Cancel</button>
+    </div>
+
+    <div class="pagination" id="paginationContainer"></div>
+
+</body>
+</html>
