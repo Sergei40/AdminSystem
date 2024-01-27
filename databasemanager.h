@@ -6,7 +6,6 @@
 #include <QSqlError>
 #include <QVector>
 #include "user.h"
-#include "user.h"
 
 class DatabaseManager {
 public:
